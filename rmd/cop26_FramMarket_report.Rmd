@@ -28,7 +28,7 @@ bibliography: '`r  path.expand("~/bibliography.bib")`'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-rmdLibs <- c("readxl", "ggplot2", "flextable")
+rmdLibs <- c("readxl", "ggplot2", "flextable", "stringr")
 
 dkUtils::loadLibraries(rmdLibs)
 
@@ -461,6 +461,10 @@ q <- "comments"
 t <- dataDT[question == q & !is.na(response_str) &
               response_str != "", .(Comment = response_str, source)]
 
+# remove anything that looks like an email address
+pattern <- "[a-z]*@[a-z]*[.][a-z]*"
+t[, Comment := stringr::str_replace(Comment, pattern, " <XX email redacted XX> ")]
+
 makeFlexTable(t, cap = "General comments for this question (both surveys)")
 
 ```
@@ -507,20 +511,20 @@ no_t <- noDT[questionText[question != 19, .(question, text = V1)]]
 
 ```
 
-Actions that were most strongly supported (> 80% of 'yes' responses) are shown in Table \@ref(tab:yesTab).
+Actions that were most strongly supported (> 80% of responses were 'yes') are shown in Table \@ref(tab:yesTab).
 
 ```{r yesTab}
 t <- yes_t[yes_response == "Yes" & pc_yes > 80][order(-pc_yes)]
 
-makeFlexTable(head(t[, .(Question = text, `% yes` = pc_yes)]))
+makeFlexTable(head(t[, .(Question = text, `% yes` = pc_yes)]), cap = "Most strongly supported")
 ```
 
-Actions that were least strongly supported (> 10% of 'no' responses) are shown in Table \@ref(tab:noTab).
+Actions that were least strongly supported (> 10% of responses were 'no') are shown in Table \@ref(tab:noTab).
 
 ```{r noTab}
 t <- no_t[no_response == "No" & pc_no > 10][order(-pc_no)]
 
-makeFlexTable(head(t[, .(Question = text, `% no` = pc_no)]))
+makeFlexTable(head(t[, .(Question = text, `% no` = pc_no)]), cap = "Least strongly supported")
 ```
 
 
