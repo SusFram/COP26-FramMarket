@@ -13,6 +13,7 @@ output:
     toc_float: TRUE
   bookdown::pdf_document2:
     toc: yes
+    toc_depth: 4
     fig_caption: yes
     number_sections: yes
   bookdown::word_document2: 
@@ -40,9 +41,11 @@ makeBarPlot <- function(d = d, q = q){
 p <- ggplot2::ggplot(plotDT, aes(x = response_str, y = freq, 
                             fill = source)) +
   geom_col() +
+  ylim(0, 60) + # force to all be the same size
   labs(x = "Response",
        y = "Count",
-       caption = paste0("Total responses: ", sum(plotDT$freq)))
+       caption = paste0("Total responses: ", sum(plotDT$freq))) +
+  coord_flip() # rotate for easy of label reading
 return(p)
 }
 ```
@@ -54,14 +57,14 @@ The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey 
 The survey was distributed in two ways:
 
  * online (available during the whole of November 2021)
- * on [paper]("COP26@Fram-Questions-V8-FINAL") at a market stall on the 6th November, timed to coincide with COP26
+ * on [paper](COP26@Fram-Questions-V8-FINAL.pdf) at a market stall on the 6th November, timed to coincide with COP26
 
 The online survey was communicated via various social media and the Town Council's website/newsletter. 
 
 The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/). The market stall also offered information in the form of:
 
- * [posters]("marketStallPosters.pdf") summarising evidence on climate change as well as national and local emissions footprints
- * a leaflet on the Framlingham [sustainability themes]("SUSTAINABLE FRAM Themes-V2-FINAL.pdf")
+ * [posters](marketStallPosters.pdf) summarising evidence on climate change as well as national and local district/parish emissions footprints;
+ * a leaflet on the Framlingham [sustainability themes](SUSTAINABLE FRAM Themes-V2-FINAL.pdf)
 
 The survey responses therefore represent the views of those who chose to respond online or who agreed to respond at the market. In both cases respondents are likely to be those who are _already_ more engaged with sustainability issues and so should not be considered as representative of the views of all Framlingham residents. It is also likely that at least some responses came from non-Framlingham residents.
 
@@ -71,7 +74,9 @@ The survey responses therefore represent the views of those who chose to respond
 # two sources, questions asked slightly differently :-(
 onlineDT_wide <- data.table::fread(paste0(dataPath, "COP26@FRAMLINGHAM SURVEY.csv"))
 
-onlineDT <- melt(onlineDT_wide, id.vars = "Timestamp")
+onlineDT <- melt(onlineDT_wide[`Do you have any comments or further ideas we can consider?` != "answers from Ben - for test purposes!"], # remove
+                 id.vars = "Timestamp")
+
 onlineDT[, question := ifelse(variable %like% "improve energy efficiency",
                               "1",
                               NA)]
@@ -149,6 +154,10 @@ paperDT[, response_str := ifelse(response_str == -1,
 paperDT[, response_str := ifelse(response_str == -99,
                                  "Don't know (stated)",
                                  response_str)]
+# now code the final comments box
+paperDT[, response_str := ifelse(question == "comments",
+                                 comment,
+                                 response_str)]
 paperDT[, source := "Paper"]
 # select the variables that match and rbind them into one data file
 
@@ -156,10 +165,10 @@ dataDT <- rbind(paperDT[, .(survey_id, question, response_str, source)],
       onlineDT[, .(survey_id = Timestamp, question, response_str, source)])
 ```
 
-There are `r nrow(dataDT)` survey responses. Of these:
+There were `r uniqueN(dataDT[, .(survey_id)])` survey responses. Of these:
 
- * `uniqueN(dataDT[source == "On-line", .(survey_id)])` were online responses between `r `min(as.Date(onlineDT_wide$Timestamp))` and `r `max(as.Date(onlineDT_wide$Timestamp))`
- * `uniqueN(dataDT[source == "Paper", .(survey_id)])` were paper-based responses collected at the market on 6/11/2021
+ * `r uniqueN(dataDT[source == "On-line", .(survey_id)])` were on-line responses between `r min(as.Date(onlineDT_wide$Timestamp))` and `r max(as.Date(onlineDT_wide$Timestamp))`;
+ * `r uniqueN(dataDT[source == "Paper", .(survey_id)])` were paper-based responses collected at the market on 2021-11-06.
 
 Table \@ref(tab:questionsTable) shows the survey questions. These were worded identically in the online and paper-based surveys.
 
@@ -170,29 +179,366 @@ makeFlexTable(t, cap = "Survey questions")
 
 However the potential responses for the paper-based and online surveys differed:
 
- * online: options were yes, no, maybe
- * paper: respondents were asked to tick boxes next to the options they would support - we have therefore coded empty tick boxes as 'no' but also coded boxes which were marked with an X as a more intentional 'No'
+ * online: options were yes, no, maybe and there was only the opportunity to add comments at the end in a specific 'further ideas or comments' question;
+ * paper: respondents were asked to tick boxes next to the options they would support - we have therefore coded empty tick boxes as 'no' but also coded boxes which were marked with an X as a more intentional 'No'. A number of paper respondents added comments beside their responses to each question. These are reported below each plot as a table - where the table is empty there were no specific comments.
  
 In order to avoid confusion and maintain transparency the responses from the two forms of the survey are presented separately (but on the same plots) below.
 
 # Results
 
-## Q1: Initiatives to improve energy efficiency (e.g. insulation, double glazing) including listed buildings?
+## Emissions reduction
+
+### Q1: Initiatives to improve energy efficiency (e.g. insulation, double glazing) including listed buildings?
 
 ```{r plotQ1}
+q <- "1"
 
-makeBarPlot(dataDT, "1")
+makeBarPlot(dataDT, q)
 
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
 ```
 
 
-## Q2: Installing publicly accessible electric vehicle charging points
+### Q2: Installing publicly accessible electric vehicle charging points
 
 ```{r plotQ2}
 
 
-makeBarPlot(dataDT, "2")
+q <- "2"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q3: Encouraging homes and businesses to switch to renewable electricity suppliers
+
+```{r plotQ3}
+
+q <- "3"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q4: Reducing car journeys - encourage local shopping, walk to school and car sharing schemes
+
+```{r plotQ4}
+
+q <- "4"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q5: Promoting community solar panel and heat pump purchase schemes
+
+```{r plotQ5}
+
+q <- "5"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q6:  Providing a thermal imaging camera free for residents to borrow to identify heat loss from homes
+
+```{r plotQ6}
+
+q <- "6"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+## Biodiversity enhacement
+
+### Q7:  Calling for new buildings to ‘make space for nature’ by designing for natural plant and wildlife habitats
+
+```{r plotQ7}
+
+q <- "7"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q8:  Working to create linked green wildlife corridors through and around the town
+
+```{r plotQ8}
+
+q <- "8"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q9:  Ensuring that green space management boosts local wildlife and encourage local land owners to do the same
+
+```{r plotQ9}
+
+q <- "9"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q10:   Allocating land to native planting, wildlife habitats and 're-wilding' via the Neighbourhood Plan
+
+```{r plotQ10}
+
+q <- "10"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+## Least Trace Living
+
+### Q11:   Having a bigger recycling centre on the edge of Framlingham for a wider range of materials
+
+```{r plotQ11}
+
+q <- "11"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
 
 ```
 
 
+### Q12:   Encouraging swap and mend initiatives
+
+```{r plotQ12}
+
+q <- "12"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+
+### Q13:   Aiming to get rid of all single use plastic (starting with bags & take away packaging)
+
+```{r plotQ13}
+
+q <- "13"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q14:   Aiming to supply compostable bags at cost price, or free at point of use
+
+```{r plotQ14}
+
+q <- "14"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+## Resilience
+
+### Q15:    Calling for new buildings and renovations to be designed to reduce or store rainwater run-off
+
+```{r plotQ15}
+
+q <- "15"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q16:    Working to prevent unsustainable development on local flood plains
+
+```{r plotQ16}
+
+q <- "16"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q17:     Encouraging native tree planting to provide summer shading throughout the town
+
+```{r plotQ17}
+
+q <- "17"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+### Q18:     Exploring options for reducing the risk of overheating in buildings
+
+```{r plotQ18}
+
+q <- "18"
+
+makeBarPlot(dataDT, q)
+
+t <- paperDT[question == q & !is.na(comment), .(comment)]
+
+makeFlexTable(t, cap = "Specific comments for this question (paper survey only)")
+
+```
+
+## General comments
+
+The table below shows all general comments made at the end of the survey. No attempt has yet been made to cluster these by theme.
+
+Please flag any that you consider disclosive (i.e. could identify the respondent) and these will be redacted in some way!
+
+```{r comments}
+
+q <- "comments"
+
+t <- dataDT[question == q & !is.na(response_str) &
+              response_str != "", .(Comment = response_str, source)]
+
+makeFlexTable(t, cap = "General comments for this question (both surveys)")
+
+```
+
+## Additional comments
+
+In addition to the above the following general comments were also made.
+
+ * investigate a tree & woodland strategy - c.f. Stonehouse Town Council's [Arboretum](https://treecare.org.uk/2243/stonehouse-community-arboretum-management-plan-launched/) - strategy prepared by Barcham (local contact)
+ * investigate Debenham Repairs shed - Friday afternoons
+ * electric car chargers - could make 2 types available (fast & standard) but consider implications of each for how long vehicle would 'need' to be plugged in
+ * old oil tank comment?
+ * investigate Enterprise @ Badingham
+
+# Summary
+
+Overall the respondents to the survey were generally supportive of all actions proposed.
+
+```{r summaryTabs}
+
+dataDT[, yes_response := ifelse(response_str %like% "Yes",
+                                "Yes", "Other")]
+dataDT[, no_response := ifelse(response_str %like% "No",
+                                "No", "Other")]
+
+yesDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, yes_response)]
+noDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, no_response)]
+
+nResponses <- uniqueN(dataDT$survey_id)
+
+questionText <- data.table::as.data.table(table(onlineDT$variable))
+questionText$question <- as.character(1:nrow(questionText))
+
+yesDT[, pc_yes := 100*count/nResponses]
+setkey(questionText, question)
+setkey(yesDT, question)
+yes_t <- yesDT[questionText[question != 19, # avoid comments question
+                            .(question, text = V1)]]
+
+noDT[, pc_no := 100*count/nResponses]
+setkey(questionText, question)
+setkey(noDT, question)
+no_t <- noDT[questionText[question != 19, .(question, text = V1)]]
+
+```
+
+Actions that were most strongly supported (> 80% of 'yes' responses) are shown in Table \@ref(tab:yesTab).
+
+```{r yesTab}
+t <- yes_t[yes_response == "Yes" & pc_yes > 80][order(-pc_yes)]
+
+makeFlexTable(head(t[, .(Question = text, `% yes` = pc_yes)]))
+```
+
+Actions that were least strongly supported (> 10% of 'no' responses) are shown in Table \@ref(tab:noTab).
+
+```{r noTab}
+t <- no_t[no_response == "No" & pc_no > 10][order(-pc_no)]
+
+makeFlexTable(head(t[, .(Question = text, `% no` = pc_no)]))
+```
+
+
+# Annex
+
+## Data processing
+
+This analysis was created using R via rmarkdown in the R Studio application.
+
+## R packages used
+
+* base R [@baseR]
+* bookdown [@bookdown]
+* data.table [@data.table]
+* ggplot2 [@ggplot2]
+* flextable [@flextable]
+* knitr [@knitr]
+* rmarkdown [@rmarkdown]
+
+
+# References
