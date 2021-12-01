@@ -1,5 +1,5 @@
 ---
-title: "COP26@Fram November 2021"
+title: "COP26 at Fram November 2021"
 subtitle: "Analysis of the survey responses"
 author: "Ben Anderson (dataknut@icloud.com)"
 date: 'Last run at: `r Sys.time()`'
