@@ -532,7 +532,7 @@ makeFlexTable(head(t[, .(Question = text, `% no` = pc_no)]), cap = "Least strong
 
 ## Data processing
 
-This analysis was created using R via rmarkdown in the R Studio application.
+This analysis was created using [R](https://cran.r-project.org/) embedded in [Rmarkdown](https://rmarkdown.rstudio.com/) in [RStudio](https://www.rstudio.com/).
 
 ## R packages used
 
