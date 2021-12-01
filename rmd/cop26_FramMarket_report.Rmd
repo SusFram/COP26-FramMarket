@@ -51,12 +51,17 @@ return(p)
 
 The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey in November 2021 intended to collect Framlingham residents' views on a range of potential sustainability actions or initiatives.
 
-The survey was distirbuted in two ways:
+The survey was distributed in two ways:
 
- * online (for)available during the whole of November 2021)
- * on paper at a marker stall on the 6th November, timed to coincide with COP26
+ * online (available during the whole of November 2021)
+ * on [paper]("COP26@Fram-Questions-V8-FINAL") at a market stall on the 6th November, timed to coincide with COP26
 
-The online survey was communicated via various social media and the Town Council's website/newsletter. The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/).
+The online survey was communicated via various social media and the Town Council's website/newsletter. 
+
+The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/). The market stall also offered information in the form of:
+
+ * [posters]("marketStallPosters.pdf") summarising evidence on climate change as well as national and local emissions footprints
+ * a leaflet on the Framlingham [sustainability themes]("SUSTAINABLE FRAM Themes-V2-FINAL.pdf")
 
 The survey responses therefore represent the views of those who chose to respond online or who agreed to respond at the market. In both cases respondents are likely to be those who are _already_ more engaged with sustainability issues and so should not be considered as representative of the views of all Framlingham residents. It is also likely that at least some responses came from non-Framlingham residents.
 
@@ -163,7 +168,7 @@ t <- unique(onlineDT[, .(variable)])
 makeFlexTable(t, cap = "Survey questions")
 ```
 
-However the potential responses for the paper-based an donline surveys differed:
+However the potential responses for the paper-based and online surveys differed:
 
  * online: options were yes, no, maybe
  * paper: respondents were asked to tick boxes next to the options they would support - we have therefore coded empty tick boxes as 'no' but also coded boxes which were marked with an X as a more intentional 'No'
