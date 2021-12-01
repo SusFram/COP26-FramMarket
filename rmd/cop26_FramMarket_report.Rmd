@@ -1,0 +1,198 @@
+---
+title: "COP26@Fram November 2021"
+subtitle: "Analysis of the survey responses"
+author: "Ben Anderson (dataknut@icloud.com)"
+date: 'Last run at: `r Sys.time()`'
+output:
+  bookdown::html_document2:
+    fig_caption: yes
+    code_folding: hide
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+    toc_float: TRUE
+  bookdown::pdf_document2:
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  bookdown::word_document2: 
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+    fig_width: 5
+bibliography: '`r  path.expand("~/bibliography.bib")`'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rmdLibs <- c("readxl", "ggplot2", "flextable")
+
+dkUtils::loadLibraries(rmdLibs)
+
+dataPath <- path.expand("~/Dropbox/Home/Framlingham/TownCouncil/EnvAdvGroup/2021-11-06-COP26_market/surveyResponses/")
+
+# functions ----
+makeBarPlot <- function(d = d, q = q){
+  plotDT <- d[question == eval(q), .(freq = .N), keyby = .(response_str, source)] # makea table of responses by source
+
+p <- ggplot2::ggplot(plotDT, aes(x = response_str, y = freq, 
+                            fill = source)) +
+  geom_col() +
+  labs(x = "Response",
+       y = "Count",
+       caption = paste0("Total responses: ", sum(plotDT$freq)))
+return(p)
+}
+```
+
+# Introduction
+
+The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey in November 2021 intended to collect Framlingham residents' views on a range of potential sustainability actions or initiatives.
+
+The survey was distributed in two ways:
+
+ * online (available during the whole of November 2021)
+ * on [paper]("COP26@Fram-Questions-V8-FINAL") at a market stall on the 6th November, timed to coincide with COP26
+
+The online survey was communicated via various social media and the Town Council's website/newsletter. 
+
+The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/). The market stall also offered information in the form of:
+
+ * [posters]("marketStallPosters.pdf") summarising evidence on climate change as well as national and local emissions footprints
+ * a leaflet on the Framlingham [sustainability themes]("SUSTAINABLE FRAM Themes-V2-FINAL.pdf")
+
+The survey responses therefore represent the views of those who chose to respond online or who agreed to respond at the market. In both cases respondents are likely to be those who are _already_ more engaged with sustainability issues and so should not be considered as representative of the views of all Framlingham residents. It is also likely that at least some responses came from non-Framlingham residents.
+
+# Data
+
+```{r load data}
+# two sources, questions asked slightly differently :-(
+onlineDT_wide <- data.table::fread(paste0(dataPath, "COP26@FRAMLINGHAM SURVEY.csv"))
+
+onlineDT <- melt(onlineDT_wide, id.vars = "Timestamp")
+onlineDT[, question := ifelse(variable %like% "improve energy efficiency",
+                              "1",
+                              NA)]
+onlineDT[, question := ifelse(variable %like% "electric vehicle",
+                              "2",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "renewable electricity",
+                              "3",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "Reducing car journeys",
+                              "4",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "solar panel",
+                              "5",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "thermal imaging camera",
+                              "6",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "make space for nature",
+                              "7",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "wildlife corridors",
+                              "8",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "green space management",
+                              "9",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "native planting",
+                              "10",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "bigger recycling centre",
+                              "11",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "swap and mend",
+                              "12",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "single use plastic",
+                              "13",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "compostable bags",
+                              "14",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "rainwater",
+                              "15",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "flood plains",
+                              "16",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "summer shading",
+                              "17",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "overheating",
+                              "18",
+                              question)]
+onlineDT[, question := ifelse(variable %like% "comments",
+                              "comments",
+                              question)]
+onlineDT[, response_str := value]
+onlineDT[, source := "On-line"]
+
+paperDF <- readxl::read_xlsx(paste0(dataPath, "COP26@FramMarket-Survey-Data.xlsx"), sheet = "paper")
+  
+paperDT <- data.table::as.data.table(paperDF)
+
+# code paper response for easier comparison
+paperDT[, response_str := ifelse(response >= 1,
+                                 "Yes (1+ ticks)",
+                                 response)]
+paperDT[, response_str := ifelse(is.na(response_str),
+                                 "No (empty)",
+                                 response_str)]
+paperDT[, response_str := ifelse(response_str == -1,
+                                 "No (cross)",
+                                 response_str)]
+paperDT[, response_str := ifelse(response_str == -99,
+                                 "Don't know (stated)",
+                                 response_str)]
+paperDT[, source := "Paper"]
+# select the variables that match and rbind them into one data file
+
+dataDT <- rbind(paperDT[, .(survey_id, question, response_str, source)],
+      onlineDT[, .(survey_id = Timestamp, question, response_str, source)])
+```
+
+There are `r nrow(dataDT)` survey responses. Of these:
+
+ * `uniqueN(dataDT[source == "On-line", .(survey_id)])` were online responses between `r `min(as.Date(onlineDT_wide$Timestamp))` and `r `max(as.Date(onlineDT_wide$Timestamp))`
+ * `uniqueN(dataDT[source == "Paper", .(survey_id)])` were paper-based responses collected at the market on 6/11/2021
+
+Table \@ref(tab:questionsTable) shows the survey questions. These were worded identically in the online and paper-based surveys.
+
+```{r questionsTable}
+t <- unique(onlineDT[, .(variable)])
+makeFlexTable(t, cap = "Survey questions")
+```
+
+However the potential responses for the paper-based and online surveys differed:
+
+ * online: options were yes, no, maybe
+ * paper: respondents were asked to tick boxes next to the options they would support - we have therefore coded empty tick boxes as 'no' but also coded boxes which were marked with an X as a more intentional 'No'
+ 
+In order to avoid confusion and maintain transparency the responses from the two forms of the survey are presented separately (but on the same plots) below.
+
+# Results
+
+## Q1: Initiatives to improve energy efficiency (e.g. insulation, double glazing) including listed buildings?
+
+```{r plotQ1}
+
+makeBarPlot(dataDT, "1")
+
+```
+
+
+## Q2: Installing publicly accessible electric vehicle charging points
+
+```{r plotQ2}
+
+
+makeBarPlot(dataDT, "2")
+
+```
+
+
