@@ -27,6 +27,7 @@ bibliography: '`r  path.expand("~/bibliography.bib")`'
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning =  FALSE)
 
 rmdLibs <- c("data.table","readxl", "ggplot2", "flextable", "stringr")
 
@@ -59,36 +60,7 @@ return(p)
 }
 ```
 
-# Introduction
-
-The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey in November 2021 intended to collect Framlingham residents' views on a range of potential sustainability actions or initiatives.
-
-The survey organised its questions into four themes:
-
- * Emissions reduction - reducing our 'carbon' footprint
- * Biodiversity enhancement - making space for nature
- * Least trace living - reducing waste and increasing re-use
- * Resilience - reducing the risks of climate change
-
-Each theme asked between 4 and 6 questions.
-
-The survey was distributed in two ways:
-
- * online (available during the whole of November 2021)
- * on [paper](COP26@Fram-Questions-V8-FINAL.pdf) at a market stall on the 6th November, timed to coincide with COP26
-
-The online survey was communicated via various social media and the Town Council's website/newsletter. 
-
-The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/). The market stall also offered information in the form of:
-
- * [posters](marketStallPosters.pdf) summarising evidence on climate change as well as national and local district/parish emissions footprints;
- * a leaflet on the Framlingham [sustainability themes](SUSTAINABLE FRAM Themes-V2-FINAL.pdf)
-
-The survey responses therefore represent the views of those who chose to respond online or who agreed to respond at the market. In both cases respondents are likely to be those who are _already_ more engaged with sustainability issues and so should not be considered as representative of the views of all Framlingham residents. It is also likely that at least some responses came from non-Framlingham residents.
-
-# Data
-
-```{r load data}
+```{r loadData}
 # two sources, questions asked slightly differently :-(
 onlineDT_wide <- data.table::fread(paste0(dataPath, "COP26@FRAMLINGHAM SURVEY.csv"))
 
@@ -200,12 +172,41 @@ dataDT <- dataDT[questionText]
 popPc <- uniqueN(dataDT[, .(survey_id)])/4016
 ```
 
+# Introduction
+
+The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey in November 2021 intended to collect Framlingham residents' views on a range of potential sustainability actions or initiatives.
+
+The survey organised its questions into four themes:
+
+ * Emissions reduction - reducing our 'carbon' footprint
+ * Biodiversity enhancement - making space for nature
+ * Least trace living - reducing waste and increasing re-use
+ * Resilience - reducing the risks of climate change
+
+Each theme asked between 4 and 6 questions.
+
+The survey was distributed in two ways:
+
+ * online (available during the whole of November 2021)
+ * on [paper](COP26@Fram-Questions-V8-FINAL.pdf) at a market stall on the 6th November, timed to coincide with COP26
+
+The online survey was communicated via various social media and the Town Council's website/newsletter. 
+
+The market survey was available to all visitors to the stall on the 6th November and was also taken round to market visitors on that morning by students from [Framlingham College](https://www.framlinghamcollege.co.uk/). The market stall also offered information in the form of:
+
+ * [posters](marketStallPosters.pdf) summarising evidence on climate change as well as national and local district/parish emissions footprints;
+ * a leaflet on the Framlingham [sustainability themes](SUSTAINABLE FRAM Themes-V2-FINAL.pdf)
+
+The survey responses therefore represent the views of those who chose to respond online or who agreed to respond at the market. In both cases respondents are likely to be those who are _already_ more engaged with sustainability issues and so should not be considered as representative of the views of all Framlingham residents. It is also likely that at least some responses came from non-Framlingham residents.
+
+# Data
+
 There were `r uniqueN(dataDT[, .(survey_id)])` survey responses. Of these:
 
  * `r uniqueN(dataDT[source == "On-line", .(survey_id)])` were on-line responses between `r min(as.Date(onlineDT_wide$Timestamp))` and `r max(as.Date(onlineDT_wide$Timestamp))`;
  * `r uniqueN(dataDT[source == "Paper", .(survey_id)])` were paper-based responses collected at the market on 2021-11-06.
 
-`r uniqueN(dataDT[, .(survey_id)])` survey responses represent about `r round(100*popPc,)`` % of the estimated Framlingham population of ~ [4,000](https://en.wikipedia.org/wiki/Framlingham).
+`r uniqueN(dataDT[, .(survey_id)])` survey responses represent about `r round(100*popPc,)` % of the estimated Framlingham population of ~ [4,000](https://en.wikipedia.org/wiki/Framlingham).
 
 Table \@ref(tab:questionsTable) shows the survey questions. These were worded identically in the online and paper-based surveys.
 
