@@ -28,7 +28,7 @@ bibliography: '`r  path.expand("~/bibliography.bib")`'
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-rmdLibs <- c("readxl", "ggplot2", "flextable", "stringr")
+rmdLibs <- c("data.table","readxl", "ggplot2", "flextable", "stringr")
 
 dkUtils::loadLibraries(rmdLibs)
 
@@ -38,13 +38,22 @@ dataPath <- path.expand("~/Dropbox/Home/Framlingham/TownCouncil/EnvAdvGroup/2021
 makeBarPlot <- function(d = d, q = q){
   plotDT <- d[question == eval(q), .(freq = .N), keyby = .(response_str, source)] # makea table of responses by source
 
+qText <- questionText[question == q, qtext]
+qTheme <- questionText[question == q, theme]
+
+levels <- c("Yes (1+ ticks)", "Yes", "Maybe", "No (empty)", "No (cross)",
+                      "Don't know (stated)")
+
+plotDT[, response_str := factor(response_str, levels)]
+
 p <- ggplot2::ggplot(plotDT, aes(x = response_str, y = freq, 
                             fill = source)) +
   geom_col() +
   ylim(0, 60) + # force to all be the same size
   labs(x = "Response",
        y = "Count",
-       caption = paste0("Total responses: ", sum(plotDT$freq))) +
+       caption = paste0("Total responses: ", sum(plotDT$freq),
+                        "\nTheme: ", qTheme, "\n", qText)) +
   coord_flip() # rotate for easy of label reading
 return(p)
 }
@@ -53,6 +62,15 @@ return(p)
 # Introduction
 
 The [Sustainability Framlingham](https://github.com/SusFram) group ran a survey in November 2021 intended to collect Framlingham residents' views on a range of potential sustainability actions or initiatives.
+
+The survey organised its questions into four themes:
+
+ * Emissions reduction - reducing our 'carbon' footprint
+ * Biodiversity enhancement - making space for nature
+ * Least trace living - reducing waste and increasing re-use
+ * Resilience - reducing the risks of climate change
+
+Each theme asked between 4 and 6 questions.
 
 The survey was distributed in two ways:
 
@@ -74,7 +92,7 @@ The survey responses therefore represent the views of those who chose to respond
 # two sources, questions asked slightly differently :-(
 onlineDT_wide <- data.table::fread(paste0(dataPath, "COP26@FRAMLINGHAM SURVEY.csv"))
 
-onlineDT <- melt(onlineDT_wide[`Do you have any comments or further ideas we can consider?` != "answers from Ben - for test purposes!"], # remove
+onlineDT <- data.table::melt(onlineDT_wide[`Do you have any comments or further ideas we can consider?` != "answers from Ben - for test purposes!"], # remove
                  id.vars = "Timestamp")
 
 onlineDT[, question := ifelse(variable %like% "improve energy efficiency",
@@ -163,6 +181,23 @@ paperDT[, source := "Paper"]
 
 dataDT <- rbind(paperDT[, .(survey_id, question, response_str, source)],
       onlineDT[, .(survey_id = Timestamp, question, response_str, source)])
+
+
+# add question text (from online survey data)
+questionText <- unique(onlineDT[, .(question = as.numeric(question), qtext = variable)])
+questionText[, theme := ifelse(question < 7, "Emissions reduction", NA)]
+questionText[, theme := ifelse(question > 6 & question < 11, "Biodiversity enhancement",
+                         theme)]
+questionText[, theme := ifelse(question > 10 & question < 15, "Least trace living",
+                         theme)]
+questionText[, theme := ifelse(question > 14 , "Resilience",
+                         theme)]
+dataDT[, question := as.numeric(question)]
+setkey(dataDT, question)
+setkey(questionText, question)
+dataDT <- dataDT[questionText]
+
+popPc <- uniqueN(dataDT[, .(survey_id)])/4016
 ```
 
 There were `r uniqueN(dataDT[, .(survey_id)])` survey responses. Of these:
@@ -170,10 +205,12 @@ There were `r uniqueN(dataDT[, .(survey_id)])` survey responses. Of these:
  * `r uniqueN(dataDT[source == "On-line", .(survey_id)])` were on-line responses between `r min(as.Date(onlineDT_wide$Timestamp))` and `r max(as.Date(onlineDT_wide$Timestamp))`;
  * `r uniqueN(dataDT[source == "Paper", .(survey_id)])` were paper-based responses collected at the market on 2021-11-06.
 
+`r uniqueN(dataDT[, .(survey_id)])` survey responses represent about `r round(100*popPc,)`` % of the estimated Framlingham population of ~ [4,000](https://en.wikipedia.org/wiki/Framlingham).
+
 Table \@ref(tab:questionsTable) shows the survey questions. These were worded identically in the online and paper-based surveys.
 
 ```{r questionsTable}
-t <- unique(onlineDT[, .(variable)])
+t <- unique(dataDT[, .(Theme = theme, Question = qtext)])
 makeFlexTable(t, cap = "Survey questions")
 ```
 
@@ -490,24 +527,20 @@ dataDT[, yes_response := ifelse(response_str %like% "Yes",
 dataDT[, no_response := ifelse(response_str %like% "No",
                                 "No", "Other")]
 
-yesDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, yes_response)]
-noDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, no_response)]
+yesDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, theme, qtext, yes_response)]
+noDT <- dataDT[question != "comments", .(count = .N), keyby = .(question, theme, qtext,no_response)]
 
 nResponses <- uniqueN(dataDT$survey_id)
 
-questionText <- data.table::as.data.table(table(onlineDT$variable))
-questionText$question <- as.character(1:nrow(questionText))
+# questionText <- data.table::as.data.table(table(onlineDT$variable))
+# questionText$question <- as.character(1:nrow(questionText))
 
 yesDT[, pc_yes := 100*count/nResponses]
-setkey(questionText, question)
-setkey(yesDT, question)
-yes_t <- yesDT[questionText[question != 19, # avoid comments question
-                            .(question, text = V1)]]
+yes_t <- yesDT[question != 19 # avoid comments question
+               ]
 
 noDT[, pc_no := 100*count/nResponses]
-setkey(questionText, question)
-setkey(noDT, question)
-no_t <- noDT[questionText[question != 19, .(question, text = V1)]]
+no_t <- noDT[question != 19]
 
 ```
 
@@ -516,7 +549,7 @@ Actions that were most strongly supported (> 80% of responses were 'yes') are sh
 ```{r yesTab}
 t <- yes_t[yes_response == "Yes" & pc_yes > 80][order(-pc_yes)]
 
-makeFlexTable(head(t[, .(Question = text, `% yes` = pc_yes)]), cap = "Most strongly supported")
+makeFlexTable(t[, .(Theme = theme, Question = qtext, `% yes` = pc_yes)], cap = "Most strongly supported (> 80% of responses were 'yes')")
 ```
 
 Actions that were least strongly supported (> 10% of responses were 'no') are shown in Table \@ref(tab:noTab).
@@ -524,11 +557,28 @@ Actions that were least strongly supported (> 10% of responses were 'no') are sh
 ```{r noTab}
 t <- no_t[no_response == "No" & pc_no > 10][order(-pc_no)]
 
-makeFlexTable(head(t[, .(Question = text, `% no` = pc_no)]), cap = "Least strongly supported")
+makeFlexTable(t[, .(Theme = theme, Question = qtext, `% no` = pc_no)], cap = "Least strongly supported (> 10% of responses were 'no')")
 ```
 
 
 # Annex
+
+## Full results table (% Yes)
+
+```{r yesTable}
+t <- yes_t[yes_response == "Yes"][order(-pc_yes)]
+
+makeFlexTable(t[, .(Theme = theme, Question = qtext, `% yes` = pc_yes)], cap = "% Yes")
+```
+
+
+## Full results table (% No)
+
+```{r noTable}
+t <- no_t[no_response == "No"][order(-pc_no)]
+
+makeFlexTable(t[, .(Theme = theme, Question = qtext, `% no` = pc_no)], cap = "Least strongly supported")
+```
 
 ## Data processing
 
