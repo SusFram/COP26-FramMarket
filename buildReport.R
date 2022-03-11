@@ -17,5 +17,6 @@ od <- here::here("docs/")
 version <- "_v2.0" 
 rmarkdown::render(input = input,
                   output_file = paste0(rmdFile, version, ".html"),
-                  output_dir = od
+                  output_dir = od,
+                  output_format = "all"
 )
